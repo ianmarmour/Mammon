@@ -29,5 +29,12 @@ func main() {
 		log.Fatal(err)
 	}
 
-	log.Println(res)
+	for _, realm := range res.Realms {
+		auctions, err := client.GetAuctions(realm.ID)
+		if err != nil {
+			log.Println(err)
+		}
+
+		log.Println(auctions)
+	}
 }

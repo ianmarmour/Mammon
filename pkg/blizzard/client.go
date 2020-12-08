@@ -32,3 +32,12 @@ func (c *Client) GetRealmsIndex() (*api.RealmsIndex, error) {
 
 	return res, nil
 }
+
+func (c *Client) GetAuctions(realmID int64) (*api.Auctions, error) {
+	res, err := api.GetAuctions(realmID, &c.Config, c.Token.AccessToken, c.HTTPClient)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
