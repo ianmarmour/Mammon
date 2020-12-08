@@ -5,15 +5,28 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/ianmarmour/Mammon/pkg/blizzard/api"
+	"github.com/ianmarmour/Mammon/pkg/blizzard"
+	"github.com/ianmarmour/Mammon/pkg/config"
 )
 
 func main() {
-	client := &http.Client{Timeout: 10 * time.Second}
-	// Currently disfunctional, need to add logic to fetch or get token from environment.
-	res, err := api.GetRealmsIndex("", "us", "en_US", client)
+	config, err := config.Get()
 	if err != nil {
-		log.Println(err)
+		log.Fatal(err)
+	}
+
+	http := &http.Client{Timeout: 10 * time.Second}
+	client := &blizzard.Client{nil, *config, http}
+
+	err = client.Authenticate()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Currently disfunctional, need to add logic to fetch or get token from environment.
+	res, err := client.GetRealmsIndex()
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	log.Println(res)

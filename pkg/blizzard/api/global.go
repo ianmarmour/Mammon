@@ -5,8 +5,6 @@ import (
 	"net/http"
 )
 
-var endpoint = "api.blizzard.com"
-
 // Item Represents a generic Item in Blizzards APIs
 type Item struct {
 	ID int64 `json:"id"`

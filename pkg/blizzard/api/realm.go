@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	"github.com/ianmarmour/Mammon/pkg/config"
 )
 
 // Realm Represents a World of Warcraft realm
@@ -21,8 +23,8 @@ type RealmsIndex struct {
 }
 
 // GetRealmsIndex Retrives the realms index in a given region with a provided locale
-func GetRealmsIndex(token string, region string, locale string, client *http.Client) (*RealmsIndex, error) {
-	url := fmt.Sprintf("https://%s.%s/data/wow/realm/index?namespace=dynamic-%s&locale=%s&access_token=%s", region, endpoint, region, locale, token)
+func GetRealmsIndex(config *config.Config, token string, client *http.Client) (*RealmsIndex, error) {
+	url := fmt.Sprintf("https://%s.%s/data/wow/realm/index?namespace=dynamic-%s&locale=%s&access_token=%s", config.Region.ID, config.Endpoint, config.Region.ID, config.Locale.ID, token)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
