@@ -33,8 +33,16 @@ func main() {
 		auctions, err := client.GetAuctions(realm.ID)
 		if err != nil {
 			log.Println(err)
-		}
+		} else {
+			for _, auction := range auctions.Auctions {
+				log.Println(auction.Item.ID)
+				itemMedia, err := client.GetItemMedia(auction.Item.ID)
+				if err != nil {
+					log.Println(err)
+				}
 
-		log.Println(auctions)
+				log.Println(itemMedia)
+			}
+		}
 	}
 }

@@ -11,9 +11,6 @@ import (
 	"github.com/ianmarmour/Mammon/pkg/config"
 )
 
-type TokenRequest struct {
-}
-
 // Token Blizzard OAuth Token Response
 type Token struct {
 	AccessToken string `json:"access_token"`
