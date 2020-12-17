@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/ianmarmour/Mammon/internal/cache"
 	"github.com/ianmarmour/Mammon/pkg/blizzard"
 	"github.com/ianmarmour/Mammon/pkg/config"
 )
@@ -29,6 +30,9 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// Temporary usage example of media cache
+	c := cache.MediaCache{Entries: map[int64]cache.MediaEntry{}}
+
 	for _, realm := range res.Realms {
 		auctions, err := client.GetAuctions(realm.ID)
 		if err != nil {
@@ -39,9 +43,18 @@ func main() {
 				itemMedia, err := client.GetItemMedia(auction.Item.ID)
 				if err != nil {
 					log.Println(err)
-				}
+				} else {
 
-				log.Println(itemMedia)
+					for _, asset := range itemMedia.Assets {
+						entry := cache.MediaEntry{
+							URL: asset.Value,
+						}
+
+						c.Update(itemMedia.ID, entry)
+					}
+
+					log.Println(c.Entries)
+				}
 			}
 		}
 	}
