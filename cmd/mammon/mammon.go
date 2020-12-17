@@ -3,9 +3,10 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 	"time"
 
-	"github.com/ianmarmour/Mammon/internal/cache"
+	"github.com/ianmarmour/Mammon/internal/db"
 	"github.com/ianmarmour/Mammon/pkg/blizzard"
 	"github.com/ianmarmour/Mammon/pkg/config"
 )
@@ -30,32 +31,28 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Temporary usage example of media cache
-	c := cache.MediaCache{Entries: map[int64]cache.MediaEntry{}}
+	g := db.Graph{}
 
 	for _, realm := range res.Realms {
+		rNode := db.Node{}
+		rNode.Value = realm
+
+		g.AddNode(rNode)
+		log.Println("Added realm to graph")
+
 		auctions, err := client.GetAuctions(realm.ID)
 		if err != nil {
 			log.Println(err)
 		} else {
 			for _, auction := range auctions.Auctions {
 				log.Println(auction.Item.ID)
-				itemMedia, err := client.GetItemMedia(auction.Item.ID)
-				if err != nil {
-					log.Println(err)
-				} else {
-
-					for _, asset := range itemMedia.Assets {
-						entry := cache.MediaEntry{
-							URL: asset.Value,
-						}
-
-						c.Update(itemMedia.ID, entry)
-					}
-
-					log.Println(c.Entries)
-				}
+				aNode := db.Node{}
+				aNode.Value = auction
+				g.AddNode(aNode)
+				g.AddEdge(rNode, aNode)
 			}
+
+			os.Exit(0)
 		}
 	}
 }
