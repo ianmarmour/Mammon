@@ -44,8 +44,8 @@ func (g *Graph) GetNeighborhood(n Node) []*Node {
 	return edges
 }
 
-// Writes the graph to disk as a binary file
-func (g *Graph) Write(path string) {
+// Persist the graph to disk as a binary file
+func (g *Graph) Persist(path string) {
 	now := time.Now()
 	sec := now.Unix()
 	filename := fmt.Sprintf("%s%v.gob", path, sec)

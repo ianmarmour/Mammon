@@ -4,10 +4,12 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/ianmarmour/Mammon/internal/db"
 	"github.com/ianmarmour/Mammon/pkg/blizzard"
+	"github.com/ianmarmour/Mammon/pkg/blizzard/api"
 	"github.com/ianmarmour/Mammon/pkg/config"
 )
 
@@ -55,4 +57,15 @@ func main() {
 
 	g.Write(config.DBPath)
 	os.Exit(0)
+}
+
+func fetchItemsMedia(itemIDs []int64) *api.ItemMedia {
+	var wg sync.WaitGroup
+	var itemsMedia []*api.ItemMedia
+	ch := make(chan *api.ItemMedia)
+
+	for _, ID := range itemIDs {
+		wg.Add(1)
+
+	}
 }

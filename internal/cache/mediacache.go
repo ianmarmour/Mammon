@@ -1,17 +1,16 @@
 package cache
 
 import (
-	"encoding/json"
+	"encoding/gob"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 )
 
 // MediaEntry Represents an item media cache entry.
 type MediaEntry struct {
-	URL string `json:"url"`
+	URL string
 }
 
 // MediaCache Represents a list of entries.
@@ -46,33 +45,38 @@ func (c *MediaCache) Delete(ID int64) error {
 	return errors.New("Cannot remove non-existant entry from cache")
 }
 
-// Initialize Reads the cache from disk and initializes it
-func (c *MediaCache) Initialize() error {
-	var initCache map[int64]MediaEntry
+// Persist the graph to disk as a binary file
+func (c *MediaCache) Persist(path string) {
+	filename := fmt.Sprintf("%smedia.gob", path)
 
-	osFile, err := os.Open("item_media.json")
+	f, err := os.Create(filename)
 	if err != nil {
-		fmt.Println(err)
+		log.Fatal("Couldn't open file for writing")
 	}
+	defer f.Close()
 
-	osFileBytes, err := ioutil.ReadAll(osFile)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	json.Unmarshal(osFileBytes, &initCache)
-
-	c.Entries = initCache
-
-	defer osFile.Close()
-
-	return nil
+	dataEncoder := gob.NewEncoder(f)
+	dataEncoder.Encode(c)
 }
 
-// Persist Writes the cache to persistant storage
-func (c *MediaCache) Persist() error {
-	jc, _ := json.Marshal(c.Entries)
-	err := ioutil.WriteFile("item_media.json", jc, 0644)
+// Load Loads a Graph object from the specified path
+func Load(path string) *MediaCache {
+	var data MediaCache
 
-	return err
+	f, err := os.Open(path)
+	if err != nil {
+		log.Println(err)
+		os.Exit(1)
+	}
+	defer f.Close()
+
+	decoder := gob.NewDecoder(f)
+
+	err = decoder.Decode(&data)
+	if err != nil {
+		log.Println(err)
+		os.Exit(1)
+	}
+
+	return &data
 }
