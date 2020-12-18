@@ -52,6 +52,8 @@ func main() {
 				g.AddEdge(rNode, aNode)
 			}
 
+			g.Write(config.DBPath)
+
 			os.Exit(0)
 		}
 	}

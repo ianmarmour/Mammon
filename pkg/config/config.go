@@ -2,6 +2,8 @@ package config
 
 import (
 	"errors"
+	"fmt"
+	"log"
 	"os"
 )
 
@@ -12,6 +14,8 @@ type Config struct {
 	Region       *Region
 	Locale       *Locale
 	Credential   *Credential
+	DBPath       string
+	CachePath    string
 }
 
 // Region Represents the region for the Blizzard API Endpoint
@@ -75,6 +79,28 @@ func GetCredential() (*Credential, error) {
 	return &c, nil
 }
 
+func GetDBPath() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	path := fmt.Sprintf("%s/.mammon/db/", home)
+
+	return path
+}
+
+func GetCachePath() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	path := fmt.Sprintf("%s/.mammon/cache/", home)
+
+	return path
+}
+
 func Get() (*Config, error) {
 	c := Config{}
 
@@ -98,6 +124,8 @@ func Get() (*Config, error) {
 	c.Region = region
 	c.Locale = locale
 	c.Credential = credential
+	c.CachePath = GetCachePath()
+	c.DBPath = GetDBPath()
 
 	return &c, nil
 }

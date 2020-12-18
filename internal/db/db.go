@@ -1,8 +1,12 @@
 package db
 
 import (
+	"encoding/gob"
 	"fmt"
+	"log"
+	"os"
 	"sync"
+	"time"
 )
 
 // Graph Represents a Mammon graph database storing all auction related information
@@ -40,24 +44,46 @@ func (g *Graph) GetNeighborhood(n Node) []*Node {
 	return edges
 }
 
-// AddEdge adds an edge to the graph
-func (g *Graph) String() {
-	g.lock.RLock()
-	s := ""
-	for i := 0; i < len(g.nodes); i++ {
-		s += g.nodes[i].String() + " -> "
-		near := g.edges[*g.nodes[i]]
-		for j := 0; j < len(near); j++ {
-			s += near[j].String() + " "
-		}
-		s += "\n"
+// Writes the graph to disk as a binary file
+func (g *Graph) Write(path string) {
+	now := time.Now()
+	sec := now.Unix()
+	filename := fmt.Sprintf("%s%v.gob", path, sec)
+
+	f, err := os.Create(filename)
+	if err != nil {
+		log.Fatal("Couldn't open file for writing")
 	}
-	fmt.Println(s)
-	g.lock.RUnlock()
+	defer f.Close()
+
+	dataEncoder := gob.NewEncoder(f)
+	dataEncoder.Encode(g)
 }
 
 // Node Represents a node in our graph containing a value
 type Node struct {
 	ID    int64
 	Value interface{}
+}
+
+// Load Loads a Graph object from the specified path
+func Load(path string) *Graph {
+	var data Graph
+
+	f, err := os.Open(path)
+	if err != nil {
+		log.Println(err)
+		os.Exit(1)
+	}
+	defer f.Close()
+
+	decoder := gob.NewDecoder(f)
+
+	err = decoder.Decode(&data)
+	if err != nil {
+		log.Println(err)
+		os.Exit(1)
+	}
+
+	return &data
 }
