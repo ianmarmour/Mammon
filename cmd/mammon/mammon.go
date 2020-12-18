@@ -45,16 +45,14 @@ func main() {
 			log.Println(err)
 		} else {
 			for _, auction := range auctions.Auctions {
-				log.Println(auction.Item.ID)
 				aNode := db.Node{}
 				aNode.Value = auction
 				g.AddNode(aNode)
 				g.AddEdge(rNode, aNode)
 			}
-
-			g.Write(config.DBPath)
-
-			os.Exit(0)
 		}
 	}
+
+	g.Write(config.DBPath)
+	os.Exit(0)
 }
