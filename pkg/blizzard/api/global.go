@@ -2,6 +2,7 @@ package api
 
 import (
 	"io/ioutil"
+	"log"
 	"net/http"
 )
 
@@ -26,10 +27,13 @@ func getBody(req *http.Request, client *http.Client) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	if r.StatusCode > 400 {
+	defer r.Body.Close()
+
+	if r.StatusCode > 299 {
+		log.Println("Bad status code")
+		log.Println(r.StatusCode)
 		return nil, err
 	}
-	defer r.Body.Close()
 
 	body, readErr := ioutil.ReadAll(r.Body)
 	if readErr != nil {

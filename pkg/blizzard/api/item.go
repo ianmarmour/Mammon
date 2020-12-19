@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/ianmarmour/Mammon/pkg/config"
@@ -39,6 +40,8 @@ func GetItemMedia(ItemID int64, config *config.Config, token string, client *htt
 	itemMedia := ItemMedia{}
 	err = json.Unmarshal(resBody, &itemMedia)
 	if err != nil {
+		log.Println(ItemID)
+		log.Println(url)
 		return nil, err
 	}
 

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
 	"mime/multipart"
 	"net/http"
 
@@ -22,8 +21,6 @@ type Token struct {
 // GetToken Returns a valid OAuth session token based on Blizzard OAuth app credentials
 func GetToken(config config.Config, client *http.Client) (*Token, error) {
 	url := fmt.Sprintf("https://%s.%s/oauth/token", config.Region.ID, config.AuthEndpoint)
-
-	log.Println(url)
 
 	buf := new(bytes.Buffer)
 	w := multipart.NewWriter(buf)
