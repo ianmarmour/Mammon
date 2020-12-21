@@ -1,5 +1,13 @@
 ## Setup
 
+### Dependencies
+
+Setting up your dependencies should be easy,
+
+```
+sudo apt install make
+```
+
 HOLDING FOR LATER UPDATES
 
 
