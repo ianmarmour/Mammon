@@ -2,8 +2,6 @@ package config
 
 import (
 	"errors"
-	"fmt"
-	"log"
 	"os"
 )
 
@@ -26,6 +24,16 @@ type Region struct {
 // Locale Represents the proper locale for the Blizzard API
 type Locale struct {
 	ID string
+}
+
+// Cache Represents Cache configuration
+type Cache struct {
+	Path string
+}
+
+// DB Represents DB configuration
+type DB struct {
+	Path string
 }
 
 // Credential Represents the OAuth Credential Pair used to generate the OAuth token for the Blizzard API
@@ -79,26 +87,30 @@ func GetCredential() (*Credential, error) {
 	return &c, nil
 }
 
-func GetDBPath() string {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		log.Fatal(err)
+// GetDB Reads out DB related configuration from the environment
+func GetDB() (*DB, error) {
+	db := DB{}
+
+	p, pOk := os.LookupEnv("MAMMON_DB_PATH")
+	if pOk == false {
+		return nil, errors.New("MAMMON_DB_PATH Environmental Variable is Unset")
 	}
+	db.Path = p
 
-	path := fmt.Sprintf("%s/.mammon/db/", home)
-
-	return path
+	return &db, nil
 }
 
-func GetCachePath() string {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		log.Fatal(err)
+// GetCache Reads out Cache related configuration from the environment
+func GetCache() (*Cache, error) {
+	c := Cache{}
+
+	p, pOk := os.LookupEnv("MAMMON_CACHE_PATH")
+	if pOk == false {
+		return nil, errors.New("MAMMON_CACHE_PATH Environmental Variable is Unset")
 	}
+	c.Path = p
 
-	path := fmt.Sprintf("%s/.mammon/cache/", home)
-
-	return path
+	return &c, nil
 }
 
 func Get() (*Config, error) {
@@ -119,13 +131,23 @@ func Get() (*Config, error) {
 		return nil, err
 	}
 
+	cache, err := GetCache()
+	if err != nil {
+		return nil, err
+	}
+
+	db, err := GetDB()
+	if err != nil {
+		return nil, err
+	}
+
 	c.Endpoint = "api.blizzard.com"
 	c.AuthEndpoint = "battle.net"
 	c.Region = region
 	c.Locale = locale
 	c.Credential = credential
-	c.CachePath = GetCachePath()
-	c.DBPath = GetDBPath()
+	c.CachePath = cache.Path
+	c.DBPath = db.Path
 
 	return &c, nil
 }

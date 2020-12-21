@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 	"log"
-	"os"
 	"sync"
+	"time"
 
 	"github.com/ianmarmour/Mammon/internal/cache"
 	"github.com/ianmarmour/Mammon/internal/db"
@@ -21,85 +21,106 @@ func main() {
 		log.Fatal(err)
 	}
 
-	rl := rate.NewLimiter(80, 80) // 90 TPS limit per Blizzard API
-	http := rhttp.NewClient(rl)
-	blizzclient := &blizzard.Client{nil, *config, http}
+	ticker := time.NewTicker(1 * time.Hour)
+	defer ticker.Stop()
 
-	err = blizzclient.Authenticate()
-	if err != nil {
-		log.Fatal(err)
+	done := make(chan bool)
+
+	for {
+		select {
+		case <-ticker.C:
+			rl := rate.NewLimiter(80, 80) // 90 TPS limit per Blizzard API
+			http := rhttp.NewClient(rl)
+			blizzclient := &blizzard.Client{nil, *config, http}
+
+			err = blizzclient.Authenticate()
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			g := db.Graph{}
+			mc := cache.Initialize(config.CachePath)
+			realms, err := blizzclient.GetConnectedRealmsIndex()
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			getGraphData(blizzclient, &g, realms)
+			getCacheData(blizzclient, &g, mc)
+
+			mc.Persist(config.CachePath)
+			g.Persist(config.DBPath)
+		case <-done:
+			return
+		}
 	}
+}
 
-	crs, err := blizzclient.GetConnectedRealmsIndex()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	g := db.Graph{}
-	mc := cache.Initialize(config.CachePath)
-
+func getGraphData(client *blizzard.Client, graph *db.Graph, realms *api.ConnectedRealmsIndex) {
 	var wg sync.WaitGroup
 
-	for _, crID := range crs.IDs() {
+	for _, id := range realms.IDs() {
 		wg.Add(1)
 
-		go func(api *blizzard.Client, g *db.Graph, mc *cache.MediaCache, crID int64, wg *sync.WaitGroup) {
+		go func(api *blizzard.Client, g *db.Graph, id int64, wg *sync.WaitGroup) {
 			defer wg.Done()
 
-			cr, err := api.GetConnectedRealm(crID)
+			realm, err := api.GetConnectedRealm(id)
 			if err != nil {
-				msg := fmt.Sprintf("Error fetching connnected realm information for realm with ID: %v", crID)
+				msg := fmt.Sprintf("Error fetching connnected realm information for realm with ID: %v", id)
 				log.Println(msg)
 				return
 			}
 
-			auctions, err := api.GetAuctions(cr.ID)
+			auctions, err := api.GetAuctions(id)
 			if err != nil {
-				msg := fmt.Sprintf("Error fetching auctions for connected realm with ID: %v", cr.ID)
+				msg := fmt.Sprintf("Error fetching auctions for connected realm with ID: %v", id)
 				log.Println(msg)
 				return
 			}
 
-			err = g.PopulateRealm(cr, auctions)
+			err = g.PopulateRealm(realm, auctions)
 			if err != nil {
-				msg := fmt.Sprintf("Error population auctions for connected realm with ID: %v", cr.ID)
+				msg := fmt.Sprintf("Error population auctions for connected realm with ID: %v", id)
 				log.Println(msg)
 			}
-		}(blizzclient, &g, mc, crID, &wg)
+		}(client, graph, id, &wg)
 	}
 
 	wg.Wait()
+}
 
-	var wg2 sync.WaitGroup
+func getCacheData(client *blizzard.Client, graph *db.Graph, mc *cache.MediaCache) {
+	var wg sync.WaitGroup
 
 	// We retrieve pointers to all our graph nodes that represent realms for future cache processing of related auctions.
-	rNodes, err := g.GetRealms()
+	rNodes, err := graph.GetRealms()
 	if err != nil {
 		msg := fmt.Sprintf("Error attempting to get all realm nodes in the DB.")
 		log.Fatal(msg)
 	}
 
-	idsToFetch := make(map[int64]bool)
+	ids := make(map[int64]bool)
 
 	for _, node := range rNodes {
-		neighbors := g.GetNeighborhood(node)
+		neighbors := graph.GetNeighborhood(node)
 
 		for _, aNode := range neighbors {
 			auction := aNode.Value.(api.Auction)
 
 			if mc.Exists(auction.Item.ID) != true {
-				idsToFetch[auction.Item.ID] = true
+				ids[auction.Item.ID] = true
 			}
 		}
 	}
 
-	for id := range idsToFetch {
-		wg2.Add(1)
+	for id := range ids {
+		wg.Add(1)
 
 		go func(api *blizzard.Client, mc *cache.MediaCache, itemID int64, wg *sync.WaitGroup) {
-			defer wg2.Done()
+			defer wg.Done()
 
-			media, err := blizzclient.GetItemMedia(itemID)
+			media, err := client.GetItemMedia(itemID)
 			if err != nil {
 				msg := fmt.Sprintf("Error attempting to fetch Item Media for Item ID: %v", itemID)
 				log.Println(msg)
@@ -107,12 +128,8 @@ func main() {
 			}
 
 			mc.Update(itemID, *media)
-		}(blizzclient, mc, id, &wg)
+		}(client, mc, id, &wg)
 	}
 
-	wg2.Wait()
-
-	mc.Persist(config.CachePath)
-	g.Persist(config.DBPath)
-	os.Exit(0)
+	wg.Wait()
 }
