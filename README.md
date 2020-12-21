@@ -1,19 +1,11 @@
-## Setup
-
-### Dependencies
-
-Setting up your dependencies should be easy,
-
-```
-sudo apt install make
-```
-
-HOLDING FOR LATER UPDATES
+## Introduction
 
 
+## Development Setup
 
-Currently there is no installation script so a few folders need to be created to store the state data
+The only required setup and installation should be to set your Blizzard API secrets up for docker using hte following commands.
 
 ```
-mkdir -p ~/.mammon/{db,cache}
+echo "mysupersecureclientid" | docker secret create BLIZZARD_API_CLIENT_ID -
+echo "mysupersecureclientsecret" | docker secret create BLIZZARD_API_CLIENT_SECRET -
 ```
