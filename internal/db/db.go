@@ -1,6 +1,7 @@
 package db
 
 import (
+	"compress/gzip"
 	"encoding/gob"
 	"fmt"
 	"log"
@@ -58,11 +59,15 @@ func (g *Graph) Persist(path string) {
 		log.Fatal("Couldn't open file for writing")
 	}
 	defer f.Close()
+
 	// Register our unknown types here.
 	gob.Register(api.ConnectedRealm{})
 	gob.Register(api.Auction{})
 
-	dataEncoder := gob.NewEncoder(f)
+	fz := gzip.NewWriter(f)
+	defer fz.Close()
+
+	dataEncoder := gob.NewEncoder(fz)
 	err = dataEncoder.Encode(g)
 	if err != nil {
 		log.Println(err)
@@ -87,7 +92,10 @@ func Load(path string) *Graph {
 	}
 	defer f.Close()
 
-	decoder := gob.NewDecoder(f)
+	fz, _ := gzip.NewReader(f)
+	defer fz.Close()
+
+	decoder := gob.NewDecoder(fz)
 
 	err = decoder.Decode(&data)
 	if err != nil {

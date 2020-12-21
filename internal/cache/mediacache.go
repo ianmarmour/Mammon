@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"compress/gzip"
 	"encoding/gob"
 	"errors"
 	"fmt"
@@ -74,7 +75,10 @@ func (c *MediaCache) Persist(path string) {
 	}
 	defer f.Close()
 
-	dataEncoder := gob.NewEncoder(f)
+	fz := gzip.NewWriter(f)
+	defer fz.Close()
+
+	dataEncoder := gob.NewEncoder(fz)
 	dataEncoder.Encode(c)
 }
 
@@ -116,7 +120,10 @@ func load(path string) *MediaCache {
 	}
 	defer f.Close()
 
-	decoder := gob.NewDecoder(f)
+	fz, _ := gzip.NewReader(f)
+	defer fz.Close()
+
+	decoder := gob.NewDecoder(fz)
 
 	err = decoder.Decode(&data)
 	if err != nil {
