@@ -8,7 +8,6 @@ import (
 	"os"
 	"sync"
 
-	"github.com/ianmarmour/Mammon/pkg/blizzard"
 	"github.com/ianmarmour/Mammon/pkg/blizzard/api"
 )
 
@@ -27,6 +26,7 @@ func (c *MediaCache) Exists(ID int64) bool {
 		return true
 	}
 
+	c.lock.Unlock()
 	return false
 }
 
@@ -41,9 +41,9 @@ func (c *MediaCache) Read(ID int64) *api.ItemMedia {
 
 // Update Either adds a new entry or updates an exisiting Cache entry
 func (c *MediaCache) Update(ID int64, entry api.ItemMedia) *api.ItemMedia {
-	c.lock.Lock()
+	s := fmt.Sprintf("Adding media for Item ID: %v to Media Cache", ID)
+	log.Println(s)
 	c.Entries[ID] = entry
-	c.lock.Unlock()
 
 	return &entry
 }
@@ -91,34 +91,6 @@ func Initialize(path string) *MediaCache {
 	}
 
 	return c
-}
-
-// Populate Populates our media cache with any missing entries based on itemIDs from the Blizzard API.
-func Populate(mc *MediaCache, client *blizzard.Client, itemIDs map[int64]bool) {
-	var wg sync.WaitGroup
-
-	for ID := range itemIDs {
-		if mc.Exists(ID) == false {
-			wg.Add(1)
-			go populateEntry(&wg, mc, client, ID)
-		}
-	}
-
-	wg.Wait()
-}
-
-// PopulateEntry Populates a cache entry
-func populateEntry(wg *sync.WaitGroup, mc *MediaCache, client *blizzard.Client, ID int64) {
-	defer wg.Done()
-
-	im, err := client.GetItemMedia(ID)
-	if err != nil {
-		msg := fmt.Sprintf("Error attempting to populate media cache for ID: %v", ID)
-		log.Println(msg)
-		log.Println(err)
-	} else {
-		mc.Update(ID, *im)
-	}
 }
 
 // exists determines if the cache exists or not

@@ -13,35 +13,36 @@ import (
 
 // Graph Represents a Mammon graph database storing all auction related information
 type Graph struct {
-	nodes []*Node
-	edges map[Node][]*Node
+	Nodes []*Node
+	Edges map[Node][]*Node
 	lock  sync.RWMutex
 }
 
 // AddNode adds a node to the graph safely
-func (g *Graph) AddNode(n Node) {
+func (g *Graph) AddNode(n *Node) {
 	g.lock.Lock()
-	g.nodes = append(g.nodes, &n)
+	g.Nodes = append(g.Nodes, n)
 	g.lock.Unlock()
 }
 
 // AddEdge Adds an edge between two nodes
-func (g *Graph) AddEdge(n1, n2 Node) {
+func (g *Graph) AddEdge(n1, n2 *Node) {
 	g.lock.Lock()
 
-	if g.edges == nil {
-		g.edges = make(map[Node][]*Node)
+	if g.Edges == nil {
+		g.Edges = make(map[Node][]*Node)
 	}
 
-	g.edges[n1] = append(g.edges[n1], &n2)
-	g.edges[n2] = append(g.edges[n2], &n1)
+	g.Edges[*n1] = append(g.Edges[*n1], n2)
 
 	g.lock.Unlock()
 }
 
 // GetNeighborhood Gets all the neighbors of a specified node
-func (g *Graph) GetNeighborhood(n Node) []*Node {
-	edges := g.edges[n]
+func (g *Graph) GetNeighborhood(n *Node) []*Node {
+	g.lock.Lock()
+	edges := g.Edges[*n]
+	g.lock.Unlock()
 
 	return edges
 }
@@ -57,14 +58,21 @@ func (g *Graph) Persist(path string) {
 		log.Fatal("Couldn't open file for writing")
 	}
 	defer f.Close()
+	// Register our unknown types here.
+	gob.Register(api.ConnectedRealm{})
+	gob.Register(api.Auction{})
 
 	dataEncoder := gob.NewEncoder(f)
-	dataEncoder.Encode(g)
+	err = dataEncoder.Encode(g)
+	if err != nil {
+		log.Println(err)
+	}
 }
 
 // Node Represents a node in our graph containing a value
 type Node struct {
 	ID    int64
+	Type  string
 	Value interface{}
 }
 
@@ -90,21 +98,35 @@ func Load(path string) *Graph {
 	return &data
 }
 
+// GetRealms Returns all realm Nodes in the graph.
+func (g *Graph) GetRealms() ([]*Node, error) {
+	var realms []*Node
+
+	for node := range g.Edges {
+		if node.Type == "realm" {
+			realms = append(realms, &node)
+		}
+	}
+
+	return realms, nil
+}
+
 // PopulateRealm Populates a realm with all it's auctions in the DB
-func PopulateRealm(db *Graph, cr *api.ConnectedRealm, auctions *api.Auctions) error {
-	rNode := Node{}
+func (g *Graph) PopulateRealm(cr *api.ConnectedRealm, auctions *api.Auctions) error {
+	rNode := Node{Type: "realm"}
+	rNode.ID = cr.ID
 	rNode.Value = cr
-	db.AddNode(rNode)
+	g.AddNode(&rNode)
 
 	s := fmt.Sprintf("Adding entry for Connected Realm ID: %v to DB", cr.ID)
 	log.Println(s)
 
 	for _, auction := range auctions.Auctions {
-		aNode := Node{}
+		aNode := Node{Type: "auction"}
+		aNode.ID = auction.ID
 		aNode.Value = auction
-
-		db.AddNode(aNode)
-		db.AddEdge(rNode, aNode)
+		g.AddNode(&aNode)
+		g.AddEdge(&rNode, &aNode)
 	}
 
 	return nil

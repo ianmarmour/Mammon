@@ -3,7 +3,6 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/ianmarmour/Mammon/pkg/config"
@@ -26,11 +25,20 @@ type Auctions struct {
 	Auctions       []Auction `json:"auctions"`
 }
 
+// ItemIDs returns the Item IDs of all auctions
+func (a *Auctions) ItemIDs() []int64 {
+	var ids []int64
+
+	for _, auction := range a.Auctions {
+		ids = append(ids, auction.ID)
+	}
+
+	return ids
+}
+
 // GetAuctions Retrives all the active auctions in a particular realm by ID
 func GetAuctions(realmID int64, config *config.Config, token string, client *rhttp.RLHTTPClient) (*Auctions, error) {
 	url := fmt.Sprintf("https://%s.%s/data/wow/connected-realm/%d/auctions?namespace=dynamic-%s&locale=%s&access_token=%s", config.Region.ID, config.Endpoint, realmID, config.Region.ID, config.Locale.ID, token)
-
-	log.Println(url)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
