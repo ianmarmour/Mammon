@@ -10,22 +10,22 @@ COPY . .
 RUN make
 
 FROM alpine:latest
+
 RUN apk update && apk add --no-cache git openssh make bash
-
 RUN addgroup -S mammon && adduser -s /bin/bash -S -G mammon mammon 
-
 RUN mkdir -p /home/mammon/cache
 RUN mkdir -p /home/mammon/db
 RUN mkdir -p /home/mammon/scripts
+RUN chown -R mammon /home/mammon
 
 COPY --from=builder /go/src/github.com/ianmarmour/Mammon/bin/mammon /usr/local/bin/mammon
-COPY --from=builder /go/src/github.com/ianmarmour/Mammon/scripts/entry_point.sh /home/mammon/scripts/entry_point.sh
-
-RUN chmod +x /home/mammon/scripts/entry_point.sh
-RUN chown -R mammon /home/mammon
 
 USER mammon
 WORKDIR /home/mammon
 
+ENV BLIZZARD_API_CLIENT_LOCALE en_US
+ENV BLIZZARD_API_CLIENT_REGION us
+ENV MAMMON_CACHE_PATH /home/mammon/cache/
+ENV MAMMON_DB_PATH /home/mammon/db/
 
-ENTRYPOINT ["/home/mammon/scripts/entry_point.sh"]
+ENTRYPOINT ["/usr/local/bin/mammon"]

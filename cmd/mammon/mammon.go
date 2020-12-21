@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"sync"
-	"time"
 
 	"github.com/ianmarmour/Mammon/internal/cache"
 	"github.com/ianmarmour/Mammon/internal/db"
@@ -21,39 +20,27 @@ func main() {
 		log.Fatal(err)
 	}
 
-	ticker := time.NewTicker(1 * time.Hour)
-	defer ticker.Stop()
+	rl := rate.NewLimiter(80, 80) // 90 TPS limit per Blizzard API
+	http := rhttp.NewClient(rl)
+	blizzclient := &blizzard.Client{nil, *config, http}
 
-	done := make(chan bool)
-
-	for {
-		select {
-		case <-ticker.C:
-			rl := rate.NewLimiter(80, 80) // 90 TPS limit per Blizzard API
-			http := rhttp.NewClient(rl)
-			blizzclient := &blizzard.Client{nil, *config, http}
-
-			err = blizzclient.Authenticate()
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			g := db.Graph{}
-			mc := cache.Initialize(config.CachePath)
-			realms, err := blizzclient.GetConnectedRealmsIndex()
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			getGraphData(blizzclient, &g, realms)
-			getCacheData(blizzclient, &g, mc)
-
-			mc.Persist(config.CachePath)
-			g.Persist(config.DBPath)
-		case <-done:
-			return
-		}
+	err = blizzclient.Authenticate()
+	if err != nil {
+		log.Fatal(err)
 	}
+
+	g := db.Graph{}
+	mc := cache.Initialize(config.CachePath)
+	realms, err := blizzclient.GetConnectedRealmsIndex()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	getGraphData(blizzclient, &g, realms)
+	getCacheData(blizzclient, &g, mc)
+
+	mc.Persist(config.CachePath)
+	g.Persist(config.DBPath)
 }
 
 func getGraphData(client *blizzard.Client, graph *db.Graph, realms *api.ConnectedRealmsIndex) {
