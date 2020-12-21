@@ -1,9 +1,13 @@
 package api
 
 import (
+	"compress/gzip"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
+
+	"github.com/ianmarmour/Mammon/pkg/rhttp"
 )
 
 // Item Represents a generic Item in Blizzards APIs
@@ -22,7 +26,7 @@ type Links struct {
 }
 
 // Gets the byte data out of a req body.
-func getBody(req *http.Request, client *http.Client) ([]byte, error) {
+func getBody(req *http.Request, client *rhttp.RLHTTPClient) ([]byte, error) {
 	r, err := client.Do(req)
 	if err != nil {
 		return nil, err
@@ -35,7 +39,18 @@ func getBody(req *http.Request, client *http.Client) ([]byte, error) {
 		return nil, err
 	}
 
-	body, readErr := ioutil.ReadAll(r.Body)
+	var reader io.ReadCloser
+
+	switch r.Header.Get("Content-Encoding") {
+	case "gzip":
+		reader, err = gzip.NewReader(r.Body)
+		defer reader.Close()
+
+	default:
+		reader = r.Body
+	}
+
+	body, readErr := ioutil.ReadAll(reader)
 	if readErr != nil {
 		return nil, readErr
 	}

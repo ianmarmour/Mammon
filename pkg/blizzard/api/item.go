@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/ianmarmour/Mammon/pkg/config"
+	"github.com/ianmarmour/Mammon/pkg/rhttp"
 )
 
 // Asset Represents a media asset of a particular WoW item
@@ -24,7 +25,7 @@ type ItemMedia struct {
 }
 
 // GetItemMedia Retrives the media for a particular item
-func GetItemMedia(ItemID int64, config *config.Config, token string, client *http.Client) (*ItemMedia, error) {
+func GetItemMedia(ItemID int64, config *config.Config, token string, client *rhttp.RLHTTPClient) (*ItemMedia, error) {
 	url := fmt.Sprintf("https://%s.%s/data/wow/media/item/%d?namespace=static-%s&locale=%s&access_token=%s", config.Region.ID, config.Endpoint, ItemID, config.Region.ID, config.Locale.ID, token)
 
 	req, err := http.NewRequest("GET", url, nil)

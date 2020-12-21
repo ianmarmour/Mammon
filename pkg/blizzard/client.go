@@ -1,17 +1,16 @@
 package blizzard
 
 import (
-	"net/http"
-
 	"github.com/ianmarmour/Mammon/pkg/blizzard/api"
 	"github.com/ianmarmour/Mammon/pkg/config"
+	"github.com/ianmarmour/Mammon/pkg/rhttp"
 )
 
 // Client the Blizzard API Client
 type Client struct {
 	Token      *api.Token
 	Config     config.Config
-	HTTPClient *http.Client
+	HTTPClient *rhttp.RLHTTPClient
 }
 
 // Authenticate Sets up OAuth communication for the Blizzard API
@@ -29,6 +28,26 @@ func (c *Client) Authenticate() error {
 // GetRealmsIndex Returns the realm index IDs for all wow realms
 func (c *Client) GetRealmsIndex() (*api.RealmsIndex, error) {
 	res, err := api.GetRealmsIndex(&c.Config, c.Token.AccessToken, c.HTTPClient)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+// GetConnectedRealmsIndex Returns the realm index IDs for all connected wow realms
+func (c *Client) GetConnectedRealmsIndex() (*api.ConnectedRealmsIndex, error) {
+	res, err := api.GetConnectedRealmsIndex(&c.Config, c.Token.AccessToken, c.HTTPClient)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+// GetConnectedRealm Returns the connected realm response
+func (c *Client) GetConnectedRealm(realmID int64) (*api.ConnectedRealm, error) {
+	res, err := api.GetConnectedRealm(realmID, &c.Config, c.Token.AccessToken, c.HTTPClient)
 	if err != nil {
 		return nil, err
 	}

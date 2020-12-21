@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/ianmarmour/Mammon/pkg/config"
+	"github.com/ianmarmour/Mammon/pkg/rhttp"
 )
 
 // Token Blizzard OAuth Token Response
@@ -19,7 +20,7 @@ type Token struct {
 }
 
 // GetToken Returns a valid OAuth session token based on Blizzard OAuth app credentials
-func GetToken(config config.Config, client *http.Client) (*Token, error) {
+func GetToken(config config.Config, client *rhttp.RLHTTPClient) (*Token, error) {
 	url := fmt.Sprintf("https://%s.%s/oauth/token", config.Region.ID, config.AuthEndpoint)
 
 	buf := new(bytes.Buffer)

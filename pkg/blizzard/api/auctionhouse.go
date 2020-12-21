@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/ianmarmour/Mammon/pkg/config"
+	"github.com/ianmarmour/Mammon/pkg/rhttp"
 )
 
 // Auction represents a single auction returned from the Blizzard auctions API.
@@ -26,7 +27,7 @@ type Auctions struct {
 }
 
 // GetAuctions Retrives all the active auctions in a particular realm by ID
-func GetAuctions(realmID int64, config *config.Config, token string, client *http.Client) (*Auctions, error) {
+func GetAuctions(realmID int64, config *config.Config, token string, client *rhttp.RLHTTPClient) (*Auctions, error) {
 	url := fmt.Sprintf("https://%s.%s/data/wow/connected-realm/%d/auctions?namespace=dynamic-%s&locale=%s&access_token=%s", config.Region.ID, config.Endpoint, realmID, config.Region.ID, config.Locale.ID, token)
 
 	log.Println(url)
@@ -35,6 +36,8 @@ func GetAuctions(realmID int64, config *config.Config, token string, client *htt
 	if err != nil {
 		return nil, err
 	}
+	// Allow blizzard API to use gzip encoding to speed things up AH data is large.
+	req.Header.Add("Accept-Encoding", "gzip")
 
 	resBody, err := getBody(req, client)
 	if err != nil {

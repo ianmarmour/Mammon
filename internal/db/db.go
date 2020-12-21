@@ -7,6 +7,8 @@ import (
 	"os"
 	"sync"
 	"time"
+
+	"github.com/ianmarmour/Mammon/pkg/blizzard/api"
 )
 
 // Graph Represents a Mammon graph database storing all auction related information
@@ -86,4 +88,24 @@ func Load(path string) *Graph {
 	}
 
 	return &data
+}
+
+// PopulateRealm Populates a realm with all it's auctions in the DB
+func PopulateRealm(db *Graph, cr *api.ConnectedRealm, auctions *api.Auctions) error {
+	rNode := Node{}
+	rNode.Value = cr
+	db.AddNode(rNode)
+
+	s := fmt.Sprintf("Adding entry for Connected Realm ID: %v to DB", cr.ID)
+	log.Println(s)
+
+	for _, auction := range auctions.Auctions {
+		aNode := Node{}
+		aNode.Value = auction
+
+		db.AddNode(aNode)
+		db.AddEdge(rNode, aNode)
+	}
+
+	return nil
 }

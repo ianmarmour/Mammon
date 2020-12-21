@@ -8,6 +8,7 @@ import (
 	"os"
 	"sync"
 
+	"github.com/ianmarmour/Mammon/pkg/blizzard"
 	"github.com/ianmarmour/Mammon/pkg/blizzard/api"
 )
 
@@ -17,27 +18,31 @@ type MediaCache struct {
 	lock    sync.RWMutex
 }
 
-// Read Reads an existing entry from the cache.
-func (c *MediaCache) Read(ID int64) (*api.ItemMedia, error) {
+// Exists Check if an entry exists in the cache.
+func (c *MediaCache) Exists(ID int64) bool {
 	c.lock.Lock()
 
-	if val, ok := c.Entries[ID]; ok {
+	if _, ok := c.Entries[ID]; ok {
 		c.lock.Unlock()
-
-		return &val, nil
+		return true
 	}
 
+	return false
+}
+
+// Read Reads an existing entry from the cache.
+func (c *MediaCache) Read(ID int64) *api.ItemMedia {
+	c.lock.Lock()
+	val := c.Entries[ID]
 	c.lock.Unlock()
 
-	return nil, errors.New("Entry not found")
+	return &val
 }
 
 // Update Either adds a new entry or updates an exisiting Cache entry
 func (c *MediaCache) Update(ID int64, entry api.ItemMedia) *api.ItemMedia {
 	c.lock.Lock()
-
 	c.Entries[ID] = entry
-
 	c.lock.Unlock()
 
 	return &entry
@@ -49,15 +54,13 @@ func (c *MediaCache) Delete(ID int64) error {
 
 	if _, ok := c.Entries[ID]; ok {
 		delete(c.Entries, ID)
-
 		c.lock.Unlock()
-
 		return nil
 	}
 
 	c.lock.Unlock()
-
 	log.Println("Error removing non-existent entry from cache")
+
 	return errors.New("Cannot remove non-existant entry from cache")
 }
 
@@ -75,8 +78,51 @@ func (c *MediaCache) Persist(path string) {
 	dataEncoder.Encode(c)
 }
 
-// Exists determines if the cache exists or not
-func Exists(path string) bool {
+// Initialize Either loads an existing cache or returns a new fresh mediacache
+func Initialize(path string) *MediaCache {
+	var c *MediaCache
+
+	cOk := exists(path)
+	if cOk == false {
+		c = &MediaCache{Entries: map[int64]api.ItemMedia{}}
+	} else {
+		// TODO: This function should probably return errors as well incase some other outstanding issue exists with the cache.
+		c = load(path)
+	}
+
+	return c
+}
+
+// Populate Populates our media cache with any missing entries based on itemIDs from the Blizzard API.
+func Populate(mc *MediaCache, client *blizzard.Client, itemIDs map[int64]bool) {
+	var wg sync.WaitGroup
+
+	for ID := range itemIDs {
+		if mc.Exists(ID) == false {
+			wg.Add(1)
+			go populateEntry(&wg, mc, client, ID)
+		}
+	}
+
+	wg.Wait()
+}
+
+// PopulateEntry Populates a cache entry
+func populateEntry(wg *sync.WaitGroup, mc *MediaCache, client *blizzard.Client, ID int64) {
+	defer wg.Done()
+
+	im, err := client.GetItemMedia(ID)
+	if err != nil {
+		msg := fmt.Sprintf("Error attempting to populate media cache for ID: %v", ID)
+		log.Println(msg)
+		log.Println(err)
+	} else {
+		mc.Update(ID, *im)
+	}
+}
+
+// exists determines if the cache exists or not
+func exists(path string) bool {
 	cacheFilePath := fmt.Sprintf("%smedia.gob", path)
 	if _, err := os.Stat(cacheFilePath); os.IsNotExist(err) {
 		return false
@@ -85,8 +131,8 @@ func Exists(path string) bool {
 	return true
 }
 
-// Load Loads a Graph object from the specified path
-func Load(path string) *MediaCache {
+// load Loads a cache object from the specified path
+func load(path string) *MediaCache {
 	cacheFilePath := fmt.Sprintf("%smedia.gob", path)
 
 	var data MediaCache
