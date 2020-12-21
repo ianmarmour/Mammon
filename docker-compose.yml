@@ -1,0 +1,19 @@
+version: '3.8'
+services:
+  mammon:
+    image: docker.io/library/mammon
+    secrets:
+      - BLIZZARD_API_CLIENT_ID
+      - BLIZZARD_API_CLIENT_SECRET
+    environment:
+      - BLIZZARD_API_CLIENT_ID_FILE=/run/secrets/BLIZZARD_API_CLIENT_ID
+      - BLIZZARD_API_CLIENT_SECRET_FILE=/run/secrets/BLIZZARD_API_CLIENT_SECRET
+      - BLIZZARD_API_CLIENT_LOCALE=en_US
+      - BLIZZARD_API_CLIENT_REGION=us
+      - MAMMON_CACHE_PATH=/home/mammon/cache/
+      - MAMMON_DB_PATH=/home/mammon/db/
+secrets:
+  BLIZZARD_API_CLIENT_ID:
+    external: true
+  BLIZZARD_API_CLIENT_SECRET:
+    external: true
